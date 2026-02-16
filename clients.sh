@@ -6,8 +6,8 @@
 set -e
 
 CONFIG_FILE="/usr/local/etc/vless/config.json"
-SERVER_FILE="/usr/local/etc/vless/server.json"
-CLIENTS_FILE="/usr/local/etc/vless/clients.json"
+SERVER_FILE="/etc/vless/server.json"
+CLIENTS_FILE="/etc/vless/clients.json"
 
 # Цвета
 RED='\033[0;31m'

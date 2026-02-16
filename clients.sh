@@ -58,8 +58,7 @@ get_server_params() {
     PORT=$(jq -r '.inbounds[0].port' "$CONFIG_FILE")
     SERVER_NAME=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$CONFIG_FILE")
     SHORT_ID=$(jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0]' "$CONFIG_FILE")
-    PRIVATE_KEY=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$CONFIG_FILE")
-    # Получаем publicKey из config.json (если есть)
+    # publicKey для Reality (обязателен!)
     PUBLIC_KEY=$(jq -r '.inbounds[0].streamSettings.realitySettings.publicKey // empty' "$CONFIG_FILE")
     
     # Проверка на IPv6 - если есть двоеточия, берём в скобки

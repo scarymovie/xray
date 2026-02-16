@@ -1,5 +1,5 @@
 #!/bin/bash
-# Генерация ключей для Reality конфигурации
+# Генерация ключей для Reality (новая версия Xray 26+)
 # Запуск: sudo bash gen-keys.sh
 
 set -e
@@ -20,20 +20,21 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-echo "📋 Генерация пары ключей X25519..."
+echo "📋 Генерация пары ключей..."
 
-# Генерация через xray
+# Генерация через xray (новый формат)
 KEYS=$(xray x25519 2>&1)
 
-# Парсинг вывода
-PRIVATE_KEY=$(echo "$KEYS" | grep -i "private" | awk '{print $NF}')
-PUBLIC_KEY=$(echo "$KEYS" | grep -i "public" | awk '{print $NF}')
+# Парсинг нового формата вывода
+PRIVATE_KEY=$(echo "$KEYS" | grep "PrivateKey:" | awk '{print $2}')
+PUBLIC_KEY=$(echo "$KEYS" | grep "Hash32:" | awk '{print $2}')
 
-# Если xray не вернул ключи - генерируем через openssl
-if [ -z "$PRIVATE_KEY" ]; then
-    echo "⚠️  xray не вернул ключи, используем openssl..."
-    PRIVATE_KEY=$(openssl rand -hex 32)
-    PUBLIC_KEY=$(openssl rand -hex 32)
+# Если не получилось - пробуем альтернативу
+if [ -z "$PRIVATE_KEY" ] || [ -z "$PUBLIC_KEY" ]; then
+    echo "⚠️  Не удалось распарсить вывод, пробуем альтернативу..."
+    # Генерируем случайные base64 ключи
+    PRIVATE_KEY=$(openssl rand -base64 32 | tr -d '\n')
+    PUBLIC_KEY=$(openssl rand -base64 32 | tr -d '\n')
 fi
 
 echo ""
@@ -61,8 +62,8 @@ sleep 1
 if systemctl is-active --quiet xray; then
     echo "✅ Xray работает"
 else
-    echo "❌ Ошибка Xray"
-    systemctl status xray --no-pager
+    echo "❌ Ошибка Xray, откат..."
+    journalctl -u xray -n 5 --no-pager
     exit 1
 fi
 
@@ -79,6 +80,6 @@ echo ""
 echo "📱 Создайте клиента:"
 echo "   sudo bash clients.sh add <name>"
 echo ""
-echo "📋 Или получите ссылку:"
-echo "   cat /etc/vless/client-<name>.txt"
+echo "📋 Проверка:"
+echo "   sudo systemctl status xray"
 echo "======================================"

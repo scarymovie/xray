@@ -55,12 +55,18 @@
 #### Вариант A: Автоматическая установка (скрипт)
 
 ```bash
-# 1. Скопируйте deploy.sh на сервер (или создайте вручную)
-# 2. Запустите от root:
+# 1. Установка зависимостей
+sudo bash setup.sh
+
+# 2. Развёртывание сервера
 sudo bash deploy.sh
 
-# 3. После установки получите ссылку:
-cat /etc/vless/vless-link.txt
+# 3. Добавить клиентов
+sudo bash clients.sh add iphone
+sudo bash clients.sh add android
+
+# 4. Получить ссылку
+cat /etc/vless/client-iphone.txt
 ```
 
 #### Вариант B: Пошаговая установка
@@ -233,9 +239,22 @@ go run main.go config     # Показать клиентскую конфигу
 .
 ├── main.go           # CLI утилита для управления
 ├── go.mod            # Go модуль
-├── deploy.sh         # Скрипт автоматической установки
+├── deploy.sh         # Скрипт автоматической установки сервера
+├── clients.sh        # Скрипт управления клиентами
+├── setup.sh          # Быстрая установка зависимостей
 ├── README.md         # Документация
 └── vless.exe         # Скомпилированный бинарник (Windows)
+```
+
+## Файлы на сервере
+
+```
+/etc/vless/
+├── config.json       # Конфигурация Xray-core
+├── server.json       # Параметры сервера
+├── clients.json      # База данных клиентов
+├── client-*.txt      # VLESS ссылки для каждого клиента
+└── vless-link.txt    # Ссылка первого клиента
 ```
 
 ## Команды CLI
@@ -247,6 +266,60 @@ go run main.go config     # Показать клиентскую конфигу
 | `config` | Показать клиентскую конфигурацию (vless:// ссылка + JSON) |
 | `generate` | Генерация новых ключей X25519 |
 | `uninstall` | Удаление Xray и конфигурации |
+
+## Управление клиентами
+
+Для добавления и управления клиентами используйте скрипт `clients.sh`.
+
+### Установка зависимостей
+
+```bash
+sudo apt install -y jq qrencode
+```
+
+### Команды
+
+| Команда | Описание |
+|---------|----------|
+| `sudo bash clients.sh add <name>` | Добавить нового клиента |
+| `sudo bash clients.sh remove <name>` | Удалить клиента |
+| `sudo bash clients.sh list` | Показать список всех клиентов |
+| `sudo bash clients.sh show <name>` | Показать конфигурацию клиента |
+| `sudo bash clients.sh enable <name>` | Включить клиента |
+| `sudo bash clients.sh disable <name>` | Выключить клиента |
+| `sudo bash clients.sh export` | Экспорт всех клиентов (JSON) |
+
+### Примеры использования
+
+```bash
+# Добавить клиентов для разных устройств
+sudo bash clients.sh add iphone
+sudo bash clients.sh add android
+sudo bash clients.sh add laptop
+sudo bash clients.sh add wife_phone
+
+# Посмотреть список клиентов
+sudo bash clients.sh list
+
+# Показать конфигурацию конкретного клиента
+sudo bash clients.sh show iphone
+
+# Временное отключение клиента
+sudo bash clients.sh disable laptop
+sudo bash clients.sh enable laptop
+
+# Удаление клиента
+sudo bash clients.sh remove laptop
+
+# Экспорт всех клиентов
+sudo bash clients.sh export > backup.json
+```
+
+### Файлы клиентов
+
+- `/etc/vless/clients.json` — база данных клиентов
+- `/etc/vless/client-<name>.txt` — vless:// ссылка для каждого клиента
+- `/etc/vless/config.json` — основная конфигурация Xray
 
 ## Клиенты
 

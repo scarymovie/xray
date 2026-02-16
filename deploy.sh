@@ -180,7 +180,20 @@ systemctl status xray --no-pager
 
 # Шаг 10: Сохранение конфигурации клиента
 echo -e "\n💾 Шаг 10: Сохранение клиентской конфигурации..."
-SERVER_IP=$(curl -s ifconfig.me)
+# Принудительно получаем IPv4 (он надёжнее для VPN)
+SERVER_IP=$(curl -4 -s ifconfig.me)
+
+# Если не получилось, пробуем альтернативу
+if [ -z "$SERVER_IP" ] || [ "$SERVER_IP" = "" ]; then
+    SERVER_IP=$(curl -4 -s ipv4.me)
+fi
+
+# Проверка на IPv6 - если есть двоеточия, берём в скобки
+if echo "$SERVER_IP" | grep -q ":"; then
+    SERVER_IP_BRACKETED="[$SERVER_IP]"
+else
+    SERVER_IP_BRACKETED="$SERVER_IP"
+fi
 
 cat > /etc/vless/server.json << EOF
 {
@@ -194,7 +207,7 @@ cat > /etc/vless/server.json << EOF
 EOF
 
 # Генерация vless:// ссылки
-VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-Reality"
+VLESS_LINK="vless://${UUID}@${SERVER_IP_BRACKETED}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-Reality"
 
 echo ""
 echo "=========================================="

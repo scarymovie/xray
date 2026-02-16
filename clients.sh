@@ -47,11 +47,23 @@ fi
 
 # Получить базовые параметры
 get_server_params() {
-    SERVER_IP=$(curl -s ifconfig.me)
+    # Принудительно получаем IPv4 (он надёжнее для VPN)
+    SERVER_IP=$(curl -4 -s ifconfig.me)
+    
+    # Если не получилось, пробуем альтернативу
+    if [ -z "$SERVER_IP" ] || [ "$SERVER_IP" = "" ]; then
+        SERVER_IP=$(curl -4 -s ipv4.me)
+    fi
+    
     PORT=$(jq -r '.inbounds[0].port' "$CONFIG_FILE")
     SERVER_NAME=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$CONFIG_FILE")
     SHORT_ID=$(jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0]' "$CONFIG_FILE")
     PRIVATE_KEY=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$CONFIG_FILE")
+    
+    # Проверка на IPv6 - если есть двоеточия, берём в скобки
+    if echo "$SERVER_IP" | grep -q ":"; then
+        SERVER_IP="[$SERVER_IP]"
+    fi
 }
 
 # Генерация UUID

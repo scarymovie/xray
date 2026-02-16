@@ -323,11 +323,61 @@ sudo bash clients.sh export > backup.json
 
 ## Клиенты
 
-- **Windows**: v2rayNG, Hiddify
-- **macOS**: Hiddify, FoXray
-- **Linux**: Hiddify, v2rayN
-- **Android**: v2rayNG, Hiddify
-- **iOS**: FoXray, Hiddify
+### v2rayNG (Windows/Android)
+
+1. **Импорт ссылки:**
+   - Откройте v2rayNG
+   - Нажмите `+` → **"Импорт из буфера обмена"**
+   - Или отсканируйте QR код
+
+2. **Проверка настроек:**
+   - Flow: `xtls-rprx-vision`
+   - Reality ShortId: (из ссылки)
+   - Reality ServerName: `www.microsoft.com`
+
+3. **Подключение:** Выберите сервер → кнопка подключения
+
+### Hiddify (Windows/macOS/Linux/Android/iOS)
+
+1. **Импорт:**
+   - Откройте Hiddify
+   - Нажмите `+` или `Import`
+   - Вставьте vless:// ссылку или QR код
+
+2. **Подключение:** Большая кнопка в центре
+
+3. **Проверка:** Откройте https://whoer.net или https://2ip.ru
+
+### FoXray (iOS/macOS)
+
+1. **Импорт:**
+   - Откройте FoXray
+   - Профиль → Добавить профиль → Из буфера обмена
+   - Или отсканируйте QR код
+
+2. **Подключение:** Выберите профиль → Connect
+
+---
+
+## Формат VLESS ссылки
+
+### IPv4
+```
+vless://uuid@192.168.1.1:443?encryption=none&security=reality&sni=example.com&fp=chrome&sid=shortid&type=tcp#name
+```
+
+### IPv6 (адрес в скобках!)
+```
+vless://uuid@[2a0d:6c2:17:1f6::]:443?encryption=none&security=reality&sni=example.com&fp=chrome&sid=shortid&type=tcp#name
+```
+
+**Параметры:**
+- `uuid` — уникальный идентификатор клиента
+- `security=reality` — протокол безопасности
+- `sni` — домен для маскировки (www.microsoft.com)
+- `fp=chrome` — отпечаток браузера
+- `sid` — ShortId для Reality
+- `flow=xtls-rprx-vision` — поток (опционально, рекомендуется)
 
 ## Лицензия
 

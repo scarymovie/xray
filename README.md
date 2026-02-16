@@ -242,6 +242,7 @@ go run main.go config     # Показать клиентскую конфигу
 ├── deploy.sh         # Скрипт автоматической установки сервера
 ├── clients.sh        # Скрипт управления клиентами
 ├── setup.sh          # Быстрая установка зависимостей
+├── fix-publickey.sh  # Исправление publicKey в конфиге
 ├── README.md         # Документация
 └── vless.exe         # Скомпилированный бинарник (Windows)
 ```
@@ -363,12 +364,14 @@ sudo bash clients.sh export > backup.json
 
 ### IPv4
 ```
-vless://uuid@192.168.1.1:443?encryption=none&security=reality&sni=example.com&fp=chrome&sid=shortid&type=tcp#name
+vless://uuid@192.168.1.1:443?encryption=none&security=reality&sni=example.com&fp=chrome&pbk=PUBLIC_KEY&sid=shortid&type=tcp#name
+                                                           ^^^
+                                                      публичный ключ (обязательно!)
 ```
 
 ### IPv6 (адрес в скобках!)
 ```
-vless://uuid@[2a0d:6c2:17:1f6::]:443?encryption=none&security=reality&sni=example.com&fp=chrome&sid=shortid&type=tcp#name
+vless://uuid@[2a0d:6c2:17:1f6::]:443?encryption=none&security=reality&sni=example.com&fp=chrome&pbk=PUBLIC_KEY&sid=shortid&type=tcp#name
 ```
 
 **Параметры:**
@@ -376,8 +379,30 @@ vless://uuid@[2a0d:6c2:17:1f6::]:443?encryption=none&security=reality&sni=exampl
 - `security=reality` — протокол безопасности
 - `sni` — домен для маскировки (www.microsoft.com)
 - `fp=chrome` — отпечаток браузера
+- `pbk` — **публичный ключ** (обязательно для Reality!)
 - `sid` — ShortId для Reality
 - `flow=xtls-rprx-vision` — поток (опционально, рекомендуется)
+
+---
+
+## Исправление ошибок
+
+### Ошибка: "PublicKey property is invalid"
+
+Это означает, что в ссылке отсутствует параметр `pbk` (публичный ключ).
+
+**Решение:**
+
+```bash
+# 1. Проверить наличие publicKey в конфиге
+sudo jq '.inbounds[0].streamSettings.realitySettings.publicKey' /usr/local/etc/xray/config.json
+
+# 2. Если пусто — запустить скрипт исправления
+sudo bash fix-publickey.sh
+
+# 3. Пересоздать клиентов
+sudo bash clients.sh add iphone
+```
 
 ## Лицензия
 

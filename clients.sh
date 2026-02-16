@@ -109,9 +109,9 @@ add_client() {
 
     # Генерация ссылки с publicKey (если есть)
     if [ -n "$PUBLIC_KEY" ]; then
-        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none&flow=xtls-rprx-vision#VLESS-${name}"
     else
-        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none&flow=xtls-rprx-vision#VLESS-${name}"
         log_warn "publicKey не найден! Ссылка может не работать."
     fi
     
@@ -208,9 +208,9 @@ show_client() {
 
     # Генерация ссылки с publicKey (если есть)
     if [ -n "$PUBLIC_KEY" ]; then
-        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none&flow=xtls-rprx-vision#VLESS-${name}"
     else
-        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none&flow=xtls-rprx-vision#VLESS-${name}"
     fi
     
     log_section "Клиент: $name"

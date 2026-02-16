@@ -5,7 +5,7 @@
 
 set -e
 
-CONFIG_FILE="/usr/local/etc/vless/config.json"
+CONFIG_FILE="/usr/local/etc/xray/config.json"
 SERVER_FILE="/etc/vless/server.json"
 CLIENTS_FILE="/etc/vless/clients.json"
 

@@ -59,6 +59,8 @@ get_server_params() {
     SERVER_NAME=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$CONFIG_FILE")
     SHORT_ID=$(jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0]' "$CONFIG_FILE")
     PRIVATE_KEY=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$CONFIG_FILE")
+    # Получаем publicKey из config.json (если есть)
+    PUBLIC_KEY=$(jq -r '.inbounds[0].streamSettings.realitySettings.publicKey // empty' "$CONFIG_FILE")
     
     # Проверка на IPv6 - если есть двоеточия, берём в скобки
     if echo "$SERVER_IP" | grep -q ":"; then
@@ -105,9 +107,14 @@ add_client() {
     
     # Перезапуск Xray
     systemctl restart xray
-    
-    # Генерация ссылки
-    VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+
+    # Генерация ссылки с publicKey (если есть)
+    if [ -n "$PUBLIC_KEY" ]; then
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+    else
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+        log_warn "publicKey не найден! Ссылка может не работать."
+    fi
     
     log_section "Клиент добавлен"
     echo "Имя: $name"
@@ -199,8 +206,13 @@ show_client() {
     
     get_server_params
     UUID=$(jq -r ".[] | select(.name == \"$name\") | .uuid" "$CLIENTS_FILE")
-    
-    VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+
+    # Генерация ссылки с publicKey (если есть)
+    if [ -n "$PUBLIC_KEY" ]; then
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+    else
+        VLESS_LINK="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-${name}"
+    fi
     
     log_section "Клиент: $name"
     echo "UUID: $UUID"

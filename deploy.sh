@@ -64,18 +64,26 @@ log_info "Директория /etc/vless создана"
 echo -e "\n🔑 Шаг 6: Генерация ключей..."
 PORT=443
 UUID=$(cat /proc/sys/kernel/random/uuid)
-PRIVATE_KEY=$(xray x25519 | grep "Private key:" | awk '{print $3}')
-SHORT_ID=$(openssl rand -hex 8)
-SERVER_NAME="www.microsoft.com"
 
-if [ -z "$PRIVATE_KEY" ]; then
+# Генерация ключей X25519
+KEYS=$(xray x25519 2>/dev/null || echo "")
+if [ -n "$KEYS" ]; then
+    PRIVATE_KEY=$(echo "$KEYS" | grep "Private key:" | awk '{print $3}')
+    PUBLIC_KEY=$(echo "$KEYS" | grep "Public key:" | awk '{print $3}')
+else
     # Fallback если xray x25519 не сработал
     PRIVATE_KEY=$(openssl rand -hex 32)
+    PUBLIC_KEY=""
+    echo "⚠️  Не удалось сгенерировать ключи через xray, используем fallback"
 fi
+
+SHORT_ID=$(openssl rand -hex 8)
+SERVER_NAME="www.microsoft.com"
 
 echo "   PORT: $PORT"
 echo "   UUID: $UUID"
 echo "   PrivateKey: $PRIVATE_KEY"
+echo "   PublicKey: $PUBLIC_KEY"
 echo "   ShortId: $SHORT_ID"
 echo "   ServerName: $SERVER_NAME"
 log_info "Ключи сгенерированы"
@@ -111,6 +119,7 @@ cat > /etc/vless/config.json << EOF
           "xver": 0,
           "serverNames": ["$SERVER_NAME", "www.apple.com"],
           "privateKey": "$PRIVATE_KEY",
+          "publicKey": "$PUBLIC_KEY",
           "minClientVer": "1.8.0",
           "maxClientVer": "",
           "maxTimeDiff": 86400000,

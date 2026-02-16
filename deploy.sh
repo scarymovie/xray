@@ -1,6 +1,6 @@
 #!/bin/bash
 # VLESS Reality Server Deployment Script for Ubuntu 24.04
-# Запуск: bash deploy.sh
+# Запуск: sudo bash deploy.sh
 
 set -e
 
@@ -17,7 +17,7 @@ fi
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 log_info() { echo -e "${GREEN}✓${NC} $1"; }
 log_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
@@ -27,6 +27,11 @@ log_error() { echo -e "${RED}✗${NC} $1"; }
 echo -e "\n📋 Шаг 1: Обновление системы..."
 apt update && apt upgrade -y
 log_info "Система обновлена"
+
+# Шаг 2: Установка зависимостей
+echo -e "\n📦 Шаг 2: Установка зависимостей..."
+apt install -y curl jq openssl
+log_info "Зависимости установлены"
 
 # Шаг 3: Открытие портов
 echo -e "\n🔓 Шаг 3: Настройка firewall..."
@@ -50,42 +55,37 @@ fi
 
 xray version
 
-# Шаг 5: Создание директории
-echo -e "\n📁 Шаг 5: Создание директории конфигурации..."
-mkdir -p /etc/vless
-log_info "Директория /etc/vless создана"
-
-# Шаг 6: Генерация ключей
-echo -e "\n🔑 Шаг 6: Генерация ключей..."
+# Шаг 5: Генерация ключей (новый формат Xray 26+)
+echo -e "\n🔑 Шаг 5: Генерация ключей..."
 PORT=443
 UUID=$(cat /proc/sys/kernel/random/uuid)
 
-# Генерация ключей X25519
-KEYS=$(xray x25519 2>/dev/null || echo "")
-if [ -n "$KEYS" ]; then
-    PRIVATE_KEY=$(echo "$KEYS" | grep "Private key:" | awk '{print $3}')
-    PUBLIC_KEY=$(echo "$KEYS" | grep "Public key:" | awk '{print $3}')
-else
-    # Fallback если xray x25519 не сработал
-    PRIVATE_KEY=$(openssl rand -hex 32)
-    PUBLIC_KEY=""
-    echo "⚠️  Не удалось сгенерировать ключи через xray, используем fallback"
+# Генерация ключей через xray (новый формат: PrivateKey, Hash32)
+KEYS=$(xray x25519 2>&1)
+PRIVATE_KEY=$(echo "$KEYS" | grep "PrivateKey:" | awk '{print $2}')
+PUBLIC_KEY=$(echo "$KEYS" | grep "Hash32:" | awk '{print $2}')
+
+# Fallback если не получилось
+if [ -z "$PRIVATE_KEY" ] || [ -z "$PUBLIC_KEY" ]; then
+    log_warn "Не удалось сгенерировать ключи через xray, используем openssl"
+    PRIVATE_KEY=$(openssl rand -base64 32 | tr -d '\n')
+    PUBLIC_KEY=$(openssl rand -base64 32 | tr -d '\n')
 fi
 
 SHORT_ID=$(openssl rand -hex 8)
 SERVER_NAME="www.microsoft.com"
 
 echo "   PORT: $PORT"
-echo "   UUID: $UUID"
-echo "   PrivateKey: $PRIVATE_KEY"
-echo "   PublicKey: $PUBLIC_KEY"
+echo "   UUID: ${UUID:0:8}..."
+echo "   PrivateKey: ${PRIVATE_KEY:0:16}..."
+echo "   PublicKey: ${PUBLIC_KEY:0:16}..."
 echo "   ShortId: $SHORT_ID"
 echo "   ServerName: $SERVER_NAME"
 log_info "Ключи сгенерированы"
 
-# Шаг 7: Создание конфигурации
-echo -e "\n⚙️  Шаг 7: Создание конфигурации..."
-cat > /etc/vless/config.json << EOF
+# Шаг 6: Создание конфигурации
+echo -e "\n⚙️  Шаг 6: Создание конфигурации..."
+cat > /usr/local/etc/xray/config.json << EOF
 {
   "log": {
     "loglevel": "warning",
@@ -146,10 +146,10 @@ cat > /etc/vless/config.json << EOF
   }
 }
 EOF
-log_info "Конфигурация создана: /etc/vless/config.json"
+log_info "Конфигурация создана: /usr/local/etc/xray/config.json"
 
-# Шаг 8: Настройка systemd
-echo -e "\n⚙️  Шаг 8: Настройка systemd сервиса..."
+# Шаг 7: Настройка systemd
+echo -e "\n⚙️  Шаг 7: Настройка systemd сервиса..."
 cat > /etc/systemd/system/xray.service << EOF
 [Unit]
 Description=Xray Service
@@ -162,7 +162,7 @@ User=nobody
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-ExecStart=/usr/local/bin/xray run -c /etc/vless/config.json
+ExecStart=/usr/local/bin/xray run -config /usr/local/etc/xray/config.json
 Restart=on-failure
 RestartPreventExitStatus=23
 LimitNPROC=10000
@@ -177,22 +177,28 @@ systemctl enable xray
 systemctl start xray
 log_info "Systemd сервис настроен"
 
-# Шаг 9: Проверка статуса
-echo -e "\n📊 Шаг 9: Проверка статуса..."
+# Шаг 8: Проверка статуса
+echo -e "\n📊 Шаг 8: Проверка статуса..."
 sleep 2
-systemctl status xray --no-pager
+if systemctl is-active --quiet xray; then
+    log_info "Xray запущен и работает"
+else
+    log_error "Ошибка запуска Xray"
+    journalctl -u xray -n 10 --no-pager
+    exit 1
+fi
 
-# Шаг 10: Сохранение конфигурации клиента
-echo -e "\n💾 Шаг 10: Сохранение клиентской конфигурации..."
-# Принудительно получаем IPv4 (он надёжнее для VPN)
+# Шаг 9: Сохранение конфигурации клиента
+echo -e "\n💾 Шаг 9: Сохранение клиентской конфигурации..."
+mkdir -p /etc/vless
+
+# Получаем IP сервера (IPv4)
 SERVER_IP=$(curl -4 -s ifconfig.me)
-
-# Если не получилось, пробуем альтернативу
-if [ -z "$SERVER_IP" ] || [ "$SERVER_IP" = "" ]; then
+if [ -z "$SERVER_IP" ]; then
     SERVER_IP=$(curl -4 -s ipv4.me)
 fi
 
-# Проверка на IPv6 - если есть двоеточия, берём в скобки
+# Проверка на IPv6
 if echo "$SERVER_IP" | grep -q ":"; then
     SERVER_IP_BRACKETED="[$SERVER_IP]"
 else
@@ -206,12 +212,12 @@ cat > /etc/vless/server.json << EOF
   "uuid": "$UUID",
   "serverName": "$SERVER_NAME",
   "shortId": "$SHORT_ID",
-  "privateKey": "$PRIVATE_KEY"
+  "publicKey": "$PUBLIC_KEY"
 }
 EOF
 
-# Генерация vless:// ссылки
-VLESS_LINK="vless://${UUID}@${SERVER_IP_BRACKETED}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-Reality"
+# Генерация vless:// ссылки с publicKey
+VLESS_LINK="vless://${UUID}@${SERVER_IP_BRACKETED}:${PORT}?encryption=none&security=reality&sni=${SERVER_NAME}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp&headerType=none#VLESS-Reality"
 
 echo ""
 echo "=========================================="
@@ -222,6 +228,7 @@ echo "📱 Клиентская конфигурация:"
 echo "----------------------------------------"
 echo "vless:// ссылка:"
 echo "$VLESS_LINK"
+echo "----------------------------------------"
 echo ""
 echo "📄 Файл конфигурации: /etc/vless/server.json"
 echo ""
@@ -234,6 +241,6 @@ echo "📋 Для просмотра конфигурации:"
 echo "   cat /etc/vless/server.json"
 echo "=========================================="
 
-# Сохранение vless ссылки в файл
+# Сохранение ссылки
 echo "$VLESS_LINK" > /etc/vless/vless-link.txt
-log_info "VLESS ссылка сохранена в /etc/vless/vless-link.txt"
+log_info "VLESS ссылка сохранена: /etc/vless/vless-link.txt"

@@ -28,11 +28,6 @@ echo -e "\n📋 Шаг 1: Обновление системы..."
 apt update && apt upgrade -y
 log_info "Система обновлена"
 
-# Шаг 2: Установка зависимостей
-echo -e "\n📦 Шаг 2: Установка зависимостей..."
-apt install -y golang-go curl unzip jq
-log_info "Зависимости установлены"
-
 # Шаг 3: Открытие портов
 echo -e "\n🔓 Шаг 3: Настройка firewall..."
 if ! command -v ufw &> /dev/null; then
